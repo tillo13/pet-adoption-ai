@@ -1,38 +1,36 @@
 # Pet Adoption AI
 
-**Helping shelter pets find forever homes through AI-generated art.**
+**AI-generated promotional art for shelter pets.**
 
-Every year, millions of pets sit in shelters waiting for someone to notice them. My wife volunteers at a local pet adoption center, and she kept telling me the same thing: *"They're all amazing, people just don't see them."*
-
-So I built this. Pet Adoption AI takes a shelter pet's adoption listing, trains a custom AI model on their photos, and generates beautiful, eye-catching artwork of that specific pet in fun, heartwarming scenarios. The kind of images that make people stop scrolling and say *"I need to meet that dog."*
+My wife volunteers at a local pet adoption clinic, and they were having trouble getting pets noticed. I was also looking for a real-world project to test out an end-to-end AI stack — Ollama for local LLM inference, Replicate for FLUX LoRA training, and Flask for tying it together. This was the result: a pipeline that takes a pet's adoption listing + photos, trains a custom model, and generates stylized artwork of that specific animal.
 
 ## What It Creates
 
-Real shelter pets, reimagined through AI to show their personality:
+Sample outputs from real shelter pets:
 
 | Jackson | Honey | Yellow | Koda |
 |---------|-------|--------|------|
 | ![Jackson](sample_outputs/jackson/jackson_1.png) | ![Honey](sample_outputs/honey/honey_1.png) | ![Yellow](sample_outputs/yellow/yellow_1.png) | ![Koda](sample_outputs/koda/koda_1.png) |
 | ![Jackson 2](sample_outputs/jackson/jackson_2.png) | ![Honey 2](sample_outputs/honey/honey_2.png) | ![Yellow 2](sample_outputs/yellow/yellow_2.png) | ![Koda 2](sample_outputs/koda/koda_2.png) |
 
-*These are all real shelter animals that needed homes. The AI learned what each pet looks like from a handful of photos, then generated unique promotional art.*
+*Each pet's LoRA was trained on 5-20 real photos, then used with style LoRAs (Pixar, Ghibli, etc.) to generate these.*
 
 ## How It Works
 
-The pipeline is four steps, orchestrated through a Flask web UI:
+Four steps, orchestrated through a Flask web UI:
 
 ```
 1. GATHER DATA      Paste the pet's adoption listing. Ollama (llama3) extracts
-                    name, breed, age, personality traits, then writes a heartwarming
-                    adoption story and generates creative image prompts.
+                    name, breed, age, personality traits, writes an adoption
+                    story, and generates image prompts.
 
 2. TRAIN A LORA     Upload 5-20 photos of the pet. The app trains a FLUX LoRA
                     on Replicate so the AI learns what this specific pet looks like.
                     (~15-20 min on a GPU-T4)
 
-3. GENERATE ART     Using the trained LoRA + fun style LoRAs (Pixar, Ghibli, Lego,
-                    hand-painted miniature), generates AI artwork of the pet in
-                    engaging scenarios based on their personality.
+3. GENERATE ART     Using the trained LoRA + style LoRAs (Pixar, Ghibli, Lego,
+                    hand-painted miniature), generates images of the pet in
+                    various scenarios based on extracted personality traits.
 
 4. CREATE MORE      A separate page lets you generate additional images with custom
                     prompts, different styles, and aspect ratios.
@@ -149,10 +147,15 @@ This project processed 7 real shelter animals:
 | Maybelline | Cat | 39 |
 | Honey | Dog | 25 |
 
+## Tech Stack
+
+- **Local LLM**: Ollama + llama3 for text extraction and prompt generation
+- **Image training**: Replicate API for FLUX LoRA fine-tuning
+- **Image generation**: Replicate API with trained LoRA + style LoRAs
+- **Web UI**: Flask + Flask-SocketIO + Bootstrap 5
+- **File hosting**: file.io for ephemeral training image uploads
+- **Notifications**: Gmail SMTP with optional GCP Secret Manager
+
 ## License
 
-MIT - Use this to help shelter pets get adopted.
-
----
-
-*Built in September 2024 because every pet deserves to be seen.*
+MIT
