@@ -18,3 +18,10 @@ image/
 image.jpg
 image.zip
 *.log
+
+# Video maker outputs
+video_maker/initial_images/
+video_maker/created_videos/
+video_maker/storylines/
+video_maker/temp_images_on_create_video/
+video_maker/frames/
