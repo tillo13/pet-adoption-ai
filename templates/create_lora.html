@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Create LoRA{% endblock %}
+
+{% block content %}
+<h1>Create LoRA</h1>
+
+<p>
+    <strong>Instructions:</strong>
+</p>
+<p>
+    Describe the pet in detail with any unique markings or look to help the robot understand, then upload 5-20 photos of
+    the pet. The app will show progress below the window and you can navigate away and the results will be in the View
+    Pets menu bar when done.
+</p>
+
+<form id="loraForm" method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label for="pet_description" class="form-label">Pet Description</label>
+        <textarea class="form-control" id="pet_description" name="pet_description" rows="3"></textarea>
+    </div>
+
+    <div class="mb-3" id="file_input_container">
+        <label for="file_input" class="form-label">Upload Images</label>
+        <input class="form-control" type="file" id="file_input" name="file_input" multiple required>
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submit-button">Create LoRA!</button>
+</form>
+
+<!-- Display submission message -->
+<div class="mt-3" id="submission-message" style="display: none;">
+    <div class="alert alert-dismissible alert-primary">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <strong id="message-text"></strong>
+    </div>
+</div>
+
+<!-- Display the progress of the generation -->
+<div id="progress-container" class="mt-3" style="display:none;">
+    <h2>Progress:</h2>
+    <div class="progress">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+            style="width: 100%">Processing...</div>
+    </div>
+    <br>
+    <div id="progress-box"
+        style="background-color: black; color: white; padding: 10px; height: 300px; overflow-y: scroll; font-family: monospace; border: 1px solid #ccc;">
+        <p id="progress-text"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+
+    socket.on('connect', function () {
+        console.log('Socket connected');
+    });
+
+    socket.on('progress_update', function (msg) {
+        if (msg.message.includes('#### GENERATION COMPLETED! ####')) {
+            // Stop the progress bar animation
+            $('#progress-bar').removeClass('progress-bar-striped progress-bar-animated');
+            $('#progress-bar').text('Completed');
+        }
+        $("#progress-text").append('<br>' + msg.message);
+        $("#progress-box").scrollTop($("#progress-box")[0].scrollHeight);
+    });
+
+    $(document).ready(function () {
+        $("#loraForm").on("submit", function (e) {
+            e.preventDefault();
+            $("#submit-button").prop("disabled", true);
+            $("#progress-container").show();
+            $("#progress-text").html(''); // Clear the progress text
+            $("#progress-bar").addClass('progress-bar-striped progress-bar-animated');
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                type: "POST",
+                url: "{{ url_for('create_lora') }}",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    $("#submission-message").show();
+                    $("#message-text").text(response.message);
+                    $("#submit-button").prop("disabled", false);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    $("#submission-message").show();
+                    $("#message-text").text("An error occurred: " + textStatus + " " + errorThrown);
+                    $("#submit-button").prop("disabled", false);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

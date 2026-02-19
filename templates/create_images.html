@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Create Images{% endblock %}
+{% block content %}
+<h1>Create New Images</h1>
+
+<form id="create-images-form" method="POST" enctype="multipart/form-data" action="{{ url_for('create_images') }}">
+    <div class="mb-3">
+        <label for="pet_directory" class="form-label">Select Pet Directory</label>
+        <select class="form-select" id="pet_directory" name="pet_directory" required>
+            {% for directory in directories %}
+            <option value="{{ directory }}">{{ directory }}</option>
+            {% endfor %}
+        </select>
+        <small class="form-text text-muted">Choose the directory containing the pet data.</small>
+    </div>
+
+    <div class="mb-3">
+        <label for="prompt" class="form-label">Prompt</label>
+        <textarea class="form-control" id="prompt" name="prompt" rows="3"
+            placeholder="Enter your image generation prompt" required></textarea>
+        <small class="form-text text-muted">Prompt for generated image. Include 'd0g_h0n3y' to use the trained object,
+            style, or concept in the resulting image.</small>
+    </div>
+
+    <div class="row">
+        <div class="col-md-2 mb-3">
+            <label for="num_outputs" class="form-label">Number of Outputs</label>
+            <select class="form-select" id="num_outputs" name="num_outputs">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+            <small class="form-text text-muted">Number of images to output (1-4).</small>
+        </div>
+
+        <div class="col-md-2 mb-3">
+            <label for="aspect_ratio" class="form-label">Aspect Ratio</label>
+            <select class="form-select" id="aspect_ratio" name="aspect_ratio">
+                <option value="1:1" selected>1:1 (Square)</option>
+                <option value="16:9">16:9 (Widescreen)</option>
+                <option value="21:9">21:9 (Cinema)</option>
+                <option value="3:2">3:2 (Photographic)</option>
+                <option value="2:3">2:3 (Portrait Camera)</option>
+                <option value="4:5">4:5 (Portrait)</option>
+                <option value="5:4">5:4 (Nearly Square)</option>
+                <option value="4:3">4:3 (Standard TV)</option>
+                <option value="3:4">3:4 (Portrait)</option>
+                <option value="9:16">9:16 (Portrait)</option>
+                <option value="9:21">9:21 (Tall Cinema)</option>
+                <option value="custom">custom (If you select this you might have to manually define width/height)
+                </option>
+            </select>
+            <small class="form-text text-muted">Aspect ratio for the generated image.</small>
+        </div>
+
+        <div class="col-md-2 mb-3">
+            <label for="output_format" class="form-label">Output Format</label>
+            <select class="form-select" id="output_format" name="output_format">
+                <option value="png" selected>png</option>
+                <option value="webp">webp</option>
+                <option value="jpg">jpg</option>
+            </select>
+            <small class="form-text text-muted">Format of the output images.</small>
+        </div>
+
+        <div class="col-md-2 mb-3">
+            <label for="guidance_scale" class="form-label">Guidance Scale</label>
+            <input type="number" step="0.1" class="form-control" id="guidance_scale" name="guidance_scale" min="0"
+                max="10" value="3.5">
+            <small class="form-text text-muted"> Lower values can give more realistic images. (2-4.5).</small>
+        </div>
+
+        <div class="col-md-2 mb-3">
+            <label for="output_quality" class="form-label">Output Quality</label>
+            <input type="number" class="form-control" id="output_quality" name="output_quality" min="0" max="100"
+                value="100">
+            <small class="form-text text-muted">Quality of the output images (0-100; higher is better). Not relevant for
+                PNG outputs.</small>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <label for="extra_lora" class="form-label">Extra LoRA</label>
+            <select class="form-select" id="extra_lora" name="extra_lora">
+                <option value="" selected>None</option>
+                <option value="Handpainted miniature">Handpainted miniature</option>
+                <option value="Phlux">Phlux</option>
+                <option value="Lego">Lego</option>
+                <option value="Pixar">Pixar</option>
+                <option value="Ghibli">Ghibli</option>
+            </select>
+            <small class="form-text text-muted">Select an additional LoRA to combine with.</small>
+        </div>
+
+        <div class="col-md-2 mb-3">
+            <label for="extra_lora_scale" class="form-label">Extra LoRA Scale</label>
+            <input type="number" step="0.1" class="form-control" id="extra_lora_scale" name="extra_lora_scale" min="-1"
+                max="2" value="1">
+            <small class="form-text text-muted">Defines how strongly the extra LoRA is applied (-1 to 2).</small>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Generate Images</button>
+</form>
+
+<div id="image-results" class="mt-3"></div>
+
+<div id="progress" class="mt-3" style="display: none;">
+    <h3>Progress</h3>
+    <div class="progress">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+            style="width: 100%">Processing...</div>
+    </div>
+    <pre id="output-log" class="mt-3"></pre>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+    const socket = io();
+
+    socket.on('progress_update', function (data) {
+        const progressElement = document.getElementById('progress');
+        const outputLogElement = document.getElementById('output-log');
+        if (progressElement.style.display === 'none') {
+            progressElement.style.display = 'block';
+        }
+        outputLogElement.textContent += data.message + "\n";
+    });
+
+    document.getElementById('create-images-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        // Show immediate message and progress bar
+        const progressElement = document.getElementById('progress');
+        const progressBarElement = document.getElementById('progress-bar');
+        const outputLogElement = document.getElementById('output-log');
+        const imageResultsElement = document.getElementById('image-results');
+
+        progressElement.style.display = 'block';
+        progressBarElement.classList.add('progress-bar-striped', 'progress-bar-animated');
+        progressBarElement.style.width = '100%';
+        outputLogElement.textContent = 'Process has been queued @ Replicate.com. Please wait for updates...\n';
+        imageResultsElement.innerHTML = '';  // Clear previous images
+
+        fetch('{{ url_for("create_images") }}', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                // Display the images and remove loading indicators
+                progressElement.style.display = 'none';
+                outputLogElement.textContent = '';
+
+                if (data.image_urls) {
+                    data.image_urls.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.classList.add('img-thumbnail', 'm-2');
+                        imageResultsElement.appendChild(img);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const errorLog = document.createElement('div');
+                errorLog.textContent = 'An error occurred while processing your request. Please try again.';
+                errorLog.classList.add('text-danger');
+                outputLogElement.appendChild(errorLog);
+            });
+    });
+</script>
+{% endblock %}

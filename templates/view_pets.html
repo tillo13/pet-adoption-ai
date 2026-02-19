@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Pet Directory{% endblock %}
+{% block content %}
+<h1>Pet Directory</h1>
+<div class="dropdown mb-3">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown"
+        aria-expanded="false">
+        {{ selected_directory if selected_directory else 'Select Pet!' }}
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        {% for directory in directories %}
+        <li>
+            <a class="dropdown-item {% if directory == selected_directory %}active{% endif %}"
+                href="{{ url_for('view_pets', selected_directory=directory) }}">
+                {{ directory }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% if json_data %}
+<h2>Pet Submission Data</h2>
+<div class="mb-3">
+    <textarea class="form-control" id="pet_json" name="pet_json" rows="10"
+        readonly>{{ json_data | tojson(indent=2) }}</textarea>
+</div>
+{% endif %}
+
+{% if ai_image_files %}
+<h2>AI Generated Images</h2>
+<div class="row">
+    {% for image in ai_image_files %}
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <a href="{{ url_for('serve_image', directory=directory, filename=image) }}" target="_blank">
+                <img src="{{ url_for('serve_image', directory=directory, filename=image) }}" class="card-img-top"
+                    alt="Image of Pet">
+                <div class="card-body text-center">
+                    <div class="card-title">{{ image }}</div>
+                </div>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>No images found in this directory.</p>
+{% endif %}
+
+{% endblock %}

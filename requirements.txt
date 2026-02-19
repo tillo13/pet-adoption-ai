@@ -1,0 +1,10 @@
+flask
+flask-socketio
+replicate
+huggingface_hub
+python-dotenv
+requests
+psutil
+beautifulsoup4
+ollama
+google-cloud-secret-manager
